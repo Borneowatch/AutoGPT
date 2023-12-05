@@ -26,12 +26,12 @@ Flutter comes with Dart, to install Flutter, follow the instructions here: https
 
 1. **Clone the repo:**
 ```
-git clone https://github.com/Significant-Gravitas/Auto-GPT.git
+git clone https://github.com/Significant-Gravitas/AutoGPT.git
 ```
 
 2. **Navigate to the project directory:**
 ```
-cd Auto-GPT/frontend
+cd AutoGPT/frontend
 ```
 
 3. **Get Flutter packages:**
@@ -41,6 +41,8 @@ flutter pub get
 
 4. **Run the app:**
 ```
+#For chromium users on linux:
+#export CHROME_EXECUTABLE=/usr/bin/chromium
 flutter run -d chrome --web-port 5000
 ```
 

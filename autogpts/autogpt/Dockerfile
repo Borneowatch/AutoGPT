@@ -19,6 +19,7 @@ ENV PIP_NO_CACHE_DIR=yes \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     POETRY_HOME="/opt/poetry" \
+    POETRY_VIRTUALENVS_PATH="/venv" \
     POETRY_VIRTUALENVS_IN_PROJECT=0 \
     POETRY_NO_INTERACTION=1
 
@@ -31,17 +32,17 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 
 # Set the entrypoint
-ENTRYPOINT ["poetry", "run", "autogpt", "--install-plugin-deps"]
+ENTRYPOINT ["poetry", "run", "autogpt"]
 CMD []
 
 # dev build -> include everything
 FROM autogpt-base as autogpt-dev
-RUN poetry install --no-root --without benchmark
+RUN poetry install --no-root
 ONBUILD COPY . ./
 
 # release build -> include bare minimum
 FROM autogpt-base as autogpt-release
-RUN poetry install --no-root --without dev,benchmark
+RUN poetry install --no-root --without dev
 ONBUILD COPY autogpt/ ./autogpt
 ONBUILD COPY scripts/ ./scripts
 ONBUILD COPY plugins/ ./plugins

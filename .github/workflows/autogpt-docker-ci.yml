@@ -1,18 +1,18 @@
-name: Auto-GPT Docker CI
+name: AutoGPT Docker CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, development ]
     paths:
+      - '.github/workflows/autogpt-docker-ci.yml'
       - 'autogpts/autogpt/**'
       - '!autogpts/autogpt/tests/vcr_cassettes'
-      - '!autogpts/autogpt/tests/challenges/current_score.json'
   pull_request:
-    branches: [ master, release-*, stable ]
+    branches: [ master, development, release-* ]
     paths:
+      - '.github/workflows/autogpt-docker-ci.yml'
       - 'autogpts/autogpt/**'
       - '!autogpts/autogpt/tests/vcr_cassettes'
-      - '!autogpts/autogpt/tests/challenges/current_score.json'
 
 concurrency:
   group: ${{ format('autogpt-docker-ci-{0}', github.head_ref && format('pr-{0}', github.event.pull_request.number) || github.sha) }}
@@ -24,6 +24,8 @@ defaults:
 
 env:
   IMAGE_NAME: auto-gpt
+  DEPLOY_IMAGE_NAME: ${{ secrets.DOCKER_USER }}/auto-gpt
+  DEV_IMAGE_TAG: latest-dev
 
 jobs:
   build:
@@ -63,10 +65,10 @@ jobs:
 
         build_type: ${{ matrix.build-type }}
 
-        prod_branch: stable
-        dev_branch: master
+        prod_branch: master
+        dev_branch: development
         repository: ${{ github.repository }}
-        base_branch: ${{ github.ref_name != 'master' && github.ref_name != 'stable' && 'master' || 'stable' }}
+        base_branch: ${{ github.ref_name != 'master' && github.ref_name != 'development' && 'development' || 'master' }}
 
         current_ref: ${{ github.ref_name }}
         commit_hash: ${{ github.event.after }}
@@ -93,6 +95,12 @@ jobs:
         with:
           submodules: true
 
+      - name: Log in to Docker hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -102,7 +110,9 @@ jobs:
         with:
           context: autogpts/autogpt
           build-args: BUILD_TYPE=dev  # include pytest
-          tags: ${{ env.IMAGE_NAME }}
+          tags: >
+            ${{ env.IMAGE_NAME }},
+            ${{ env.DEPLOY_IMAGE_NAME }}:${{ env.DEV_IMAGE_TAG }}
           load: true                  # save to docker images
           # cache layers in GitHub Actions cache to speed up builds
           cache-from: type=gha,scope=autogpt-docker-dev
@@ -119,7 +129,7 @@ jobs:
           test_output=$(
             docker run --env CI --env OPENAI_API_KEY \
               --entrypoint poetry ${{ env.IMAGE_NAME }} run \
-              run pytest -v --cov=autogpt --cov-branch --cov-report term-missing \
+              pytest -v --cov=autogpt --cov-branch --cov-report term-missing \
               --numprocesses=4 --durations=10 \
               tests/unit tests/integration 2>&1
           )
@@ -135,3 +145,7 @@ jobs:
           $EOF
 
           exit $test_failure
+
+      - if: github.event_name == 'push' && github.ref_name == 'master'
+        name: Push image to Docker Hub
+        run: docker push ${{ env.DEPLOY_IMAGE_NAME }}:${{ env.DEV_IMAGE_TAG }}

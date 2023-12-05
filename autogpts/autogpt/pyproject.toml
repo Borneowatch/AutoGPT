@@ -6,7 +6,7 @@ authors = [
 ]
 readme = "README.md"
 description = "An open-source attempt to make GPT-4 autonomous"
-homepage = "https://github.com/Significant-Gravitas/Auto-GPT/tree/master/autogpts/autogpt"
+homepage = "https://github.com/Significant-Gravitas/AutoGPT/tree/master/autogpts/autogpt"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -16,11 +16,14 @@ packages = [{ include = "autogpt" }]
 
 
 [tool.poetry.scripts]
-autogpt = "autogpt.app.cli:main"
+autogpt = "autogpt.app.cli:cli"
+serve = "autogpt.app.cli:serve"
 
 
 [tool.poetry.dependencies]
 python = "^3.10"
+# autogpt-forge = { path = "../forge" }
+autogpt-forge = {git = "https://github.com/Significant-Gravitas/AutoGPT.git", subdirectory = "autogpts/forge"}
 beautifulsoup4 = "^4.12.2"
 charset-normalizer = "^3.1.0"
 click = "*"
@@ -29,12 +32,15 @@ distro = "^1.8.0"
 docker = "*"
 duckduckgo-search = "^3.0.2"
 en-core-web-sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl"}
+fastapi = "*"
 ftfy = "^6.1.1"
 google-api-python-client = "*"
 gTTS = "^2.3.1"
+hypercorn = "^0.14.4"
 inflection = "*"
 jsonschema = "*"
 markdown = "*"
+numpy = "*"
 openai = "^0.27.10"
 orjson = "^3.8.10"
 Pillow = "*"
@@ -52,33 +58,36 @@ redis = "*"
 requests = "*"
 selenium = "^4.11.2"
 spacy = "^3.0.0"
-tiktoken = "^0.3.3"
+tiktoken = "^0.5.0"
 webdriver-manager = "*"
 
-# web server
-fastapi = "*"
-uvicorn = "*"
-
 # OpenAI and Generic plugins import
-openapi-python-client = "^0.13.4"
+openapi-python-client = "^0.14.0"
+
+# Benchmarking
+# agbenchmark = { path = "../../benchmark", optional = true }
+agbenchmark = {git = "https://github.com/Significant-Gravitas/AutoGPT.git", subdirectory = "benchmark", optional = true}
+google-cloud-logging = "^3.8.0"
+
+[tool.poetry.extras]
+benchmark = ["agbenchmark"]
 
 [tool.poetry.group.dev.dependencies]
 auto-gpt-plugin-template = {git = "https://github.com/Significant-Gravitas/Auto-GPT-Plugin-Template", rev = "0.1.0"}
 black = "*"
-coverage = "*"
 flake8 = "*"
 gitpython = "^3.1.32"
 isort = "*"
 mypy = "*"
-numpy = "*"
 pre-commit = "*"
 types-beautifulsoup4 = "*"
 types-colorama = "*"
 types-Markdown = "*"
 types-Pillow = "*"
 
-# Testing dependencies
+# Testing
 asynctest = "*"
+coverage = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-benchmark = "*"
@@ -88,9 +97,6 @@ pytest-mock = "*"
 pytest-recording = "*"
 pytest-xdist = "*"
 vcrpy = {git = "https://github.com/Significant-Gravitas/vcrpy.git", rev = "master"}
-
-[tool.poetry.group.benchmark.dependencies]
-agbenchmark = { path = "../../benchmark" }
 
 
 [build-system]
@@ -103,7 +109,7 @@ line-length = 88
 target-version = ['py310']
 include = '\.pyi?$'
 packages = ["autogpt"]
-extend-exclude = '.+/(dist|.venv|venv|build)/.+'
+extend-exclude = '.+/(dist|.venv|venv|build|data)/.+'
 
 
 [tool.isort]
@@ -121,17 +127,32 @@ sections = [
     "FIRSTPARTY",
     "LOCALFOLDER"
 ]
-skip = '''
-    .tox
-    __pycache__
-    *.pyc
-    .env
-    venv*/*
-    .venv/*
-    reports/*
-    dist/*
+extend_skip = [
+    "agbenchmark_config/temp_folder/",
+    "data/",
+]
 
-'''
+
+[tool.mypy]
+follow_imports = 'skip'
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+files = [
+    'autogpt/**/*.py',
+    'tests/**/*.py'
+]
+
+[[tool.mypy.overrides]]
+module = 'tests.*'
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = [
+    'requests.*',
+    'yaml.*'
+]
+ignore_missing_imports = true
 
 
 [tool.pytest.ini_options]
